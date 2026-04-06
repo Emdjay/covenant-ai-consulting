@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-export const dynamic = "force-dynamic";
-
 interface Client {
   id: string;
   name: string;
@@ -161,7 +159,7 @@ export default function AdminPage() {
                 className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
               />
               <input
-                type="text"
+                type="password"
                 placeholder="Password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}

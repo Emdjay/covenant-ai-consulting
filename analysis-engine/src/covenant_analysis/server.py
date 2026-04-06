@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -13,7 +14,6 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .pipeline import AnalysisPipeline
-from .report import generate_markdown_report
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -38,28 +38,47 @@ class AnalyzeResponse(BaseModel):
 
 
 @app.get("/health")
-async def health():
-    has_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
-    return {"status": "ok", "anthropic_key_set": has_key}
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+def _safe_extract(zf: zipfile.ZipFile, dest: Path) -> None:
+    """Extract zip file with zip-slip protection."""
+    dest_resolved = dest.resolve()
+    for member in zf.infolist():
+        member_path = (dest / member.filename).resolve()
+        if not str(member_path).startswith(str(dest_resolved)):
+            raise ValueError(f"Zip entry escapes target directory: {member.filename}")
+        zf.extract(member, dest)
+
+
+def _run_analysis(api_key: str, extract_dir: Path) -> dict:
+    """Synchronous analysis — runs in a thread to avoid blocking the event loop."""
+    pipeline = AnalysisPipeline(api_key=api_key)
+    analysis = pipeline.analyze_bundle(extract_dir)
+    return json.loads(analysis.model_dump_json())
 
 
 @app.post("/analyze", response_model=AnalyzeResponse)
-async def analyze(req: AnalyzeRequest):
+async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
+        raise HTTPException(status_code=500, detail="Analysis engine not configured")
 
     bundle_zip = Path(req.bundle_path)
     if not bundle_zip.exists():
-        raise HTTPException(status_code=404, detail=f"Bundle not found: {req.bundle_path}")
+        raise HTTPException(status_code=404, detail="Bundle not found")
 
     with tempfile.TemporaryDirectory() as tmp:
         extract_dir = Path(tmp) / "bundle"
         extract_dir.mkdir()
 
         if bundle_zip.suffix == ".zip":
-            with zipfile.ZipFile(bundle_zip, "r") as zf:
-                zf.extractall(extract_dir)
+            try:
+                with zipfile.ZipFile(bundle_zip, "r") as zf:
+                    _safe_extract(zf, extract_dir)
+            except (zipfile.BadZipFile, ValueError) as exc:
+                raise HTTPException(status_code=400, detail="Invalid or unsafe zip file") from exc
             contents = list(extract_dir.iterdir())
             if len(contents) == 1 and contents[0].is_dir():
                 extract_dir = contents[0]
@@ -70,12 +89,8 @@ async def analyze(req: AnalyzeRequest):
         if not manifest_path.exists():
             raise HTTPException(status_code=400, detail="No manifest.json in bundle")
 
-        logger.info("Starting analysis for audit %s from %s", req.audit_id, bundle_zip)
-        pipeline = AnalysisPipeline(api_key=api_key)
-        analysis = pipeline.analyze_bundle(extract_dir)
-
-        result_json = analysis.model_dump_json()
-        result_data = json.loads(result_json)
+        logger.info("Starting analysis for audit %s", req.audit_id)
+        result_data = await asyncio.to_thread(_run_analysis, api_key, extract_dir)
 
         weekly_savings = sum(
             opp.get("weekly_time_saved_hours", 0) for opp in result_data.get("opportunities", [])
@@ -88,7 +103,7 @@ async def analyze(req: AnalyzeRequest):
 
         return AnalyzeResponse(
             audit_id=req.audit_id,
-            result_json=result_json,
+            result_json=json.dumps(result_data),
             executive_summary=result_data.get("executive_summary", ""),
             opportunities_count=len(result_data.get("opportunities", [])),
             total_hours=result_data.get("total_hours_captured", 0),

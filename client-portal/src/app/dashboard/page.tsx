@@ -47,11 +47,15 @@ export default async function DashboardPage() {
   let latestAnalysisAuditId: string | null = null;
 
   if (latestWithAnalysis?.analysis) {
-    const parsed: WorkflowAnalysis = JSON.parse(latestWithAnalysis.analysis.resultJson);
-    topOpportunities = parsed.opportunities
-      .sort((a, b) => b.roi_score - a.roi_score)
-      .slice(0, 3);
-    latestAnalysisAuditId = latestWithAnalysis.id;
+    try {
+      const parsed: WorkflowAnalysis = JSON.parse(latestWithAnalysis.analysis.resultJson);
+      topOpportunities = parsed.opportunities
+        .sort((a, b) => b.roi_score - a.roi_score)
+        .slice(0, 3);
+      latestAnalysisAuditId = latestWithAnalysis.id;
+    } catch {
+      // corrupted analysis data — skip
+    }
   }
 
   return (

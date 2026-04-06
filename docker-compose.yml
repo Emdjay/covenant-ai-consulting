@@ -33,8 +33,8 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=file:./prisma/prod.db
-      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
-      - ADMIN_SECRET=${ADMIN_SECRET:-change-me-in-production}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - ADMIN_SECRET=${ADMIN_SECRET:?ADMIN_SECRET is required}
       - ANALYSIS_ENGINE_URL=http://analysis-engine:8100
     volumes:
       - portal-data:/app/prisma

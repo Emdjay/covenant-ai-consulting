@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
 
   const formData = await req.formData();
   const file = formData.get("bundle") as File | null;
-  const sessionId = (formData.get("sessionId") as string) || "unknown";
+  const rawSessionId = (formData.get("sessionId") as string) || "unknown";
+  const sessionId = rawSessionId.replace(/[^a-zA-Z0-9_\-]/g, "_").slice(0, 100);
   const auditId = formData.get("auditId") as string | null;
 
   if (!file) {

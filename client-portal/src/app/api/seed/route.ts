@@ -54,7 +54,6 @@ export async function POST() {
   return NextResponse.json({
     message: "Seeded successfully",
     email: "demo@democorp.com",
-    password: "demo123",
     apiKey: client.apiKey,
   });
 }

@@ -49,7 +49,19 @@ export default async function AnalysisPage({
     );
   }
 
-  const analysis: WorkflowAnalysis = JSON.parse(audit.analysis.resultJson);
+  let analysis: WorkflowAnalysis;
+  try {
+    analysis = JSON.parse(audit.analysis.resultJson);
+  } catch {
+    return (
+      <div className="rounded-xl border border-card-border bg-card p-8 text-center">
+        <p className="text-lg font-medium">Analysis Data Error</p>
+        <p className="mt-2 text-sm text-muted">
+          The analysis data could not be parsed. Please contact support.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -101,7 +113,14 @@ export default async function AnalysisPage({
               }
             }
             if (line.trim() === "") return null;
-            return <p key={i} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />;
+            const segments = line.split(/\*\*(.*?)\*\*/g);
+            return (
+              <p key={i}>
+                {segments.map((seg, j) =>
+                  j % 2 === 1 ? <strong key={j}>{seg}</strong> : seg
+                )}
+              </p>
+            );
           })}
         </div>
       </div>

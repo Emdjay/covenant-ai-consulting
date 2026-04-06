@@ -1,17 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.JWT_SECRET || "admin-secret";
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
+if (!ADMIN_SECRET) {
+  throw new Error("ADMIN_SECRET environment variable is required");
+}
 
 function checkAdmin(req: NextRequest) {
   const auth = req.headers.get("authorization");
-  if (!auth || auth !== `Bearer ${ADMIN_SECRET}`) {
+  if (!auth) return false;
+
+  const expected = `Bearer ${ADMIN_SECRET}`;
+  if (auth.length !== expected.length) return false;
+
+  try {
+    return timingSafeEqual(Buffer.from(auth), Buffer.from(expected));
+  } catch {
     return false;
   }
-  return true;
 }
 
 export async function GET(req: NextRequest) {
@@ -20,6 +30,7 @@ export async function GET(req: NextRequest) {
   }
 
   const clients = await prisma.client.findMany({
+    take: 100,
     select: {
       id: true,
       name: true,
@@ -42,9 +53,13 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { name, email, password } = body;
 
-  if (!name || !email || !password) {
+  if (
+    !name || typeof name !== "string" ||
+    !email || typeof email !== "string" ||
+    !password || typeof password !== "string"
+  ) {
     return NextResponse.json(
-      { error: "name, email, and password are required" },
+      { error: "name, email, and password are required (strings)" },
       { status: 400 }
     );
   }
@@ -78,10 +93,12 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Client id required" }, { status: 400 });
   }
 
-  await prisma.analysis.deleteMany({ where: { audit: { clientId: id } } });
-  await prisma.bundle.deleteMany({ where: { audit: { clientId: id } } });
-  await prisma.audit.deleteMany({ where: { clientId: id } });
-  await prisma.client.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.analysis.deleteMany({ where: { audit: { clientId: id } } }),
+    prisma.bundle.deleteMany({ where: { audit: { clientId: id } } }),
+    prisma.audit.deleteMany({ where: { clientId: id } }),
+    prisma.client.delete({ where: { id } }),
+  ]);
 
   return NextResponse.json({ ok: true });
 }

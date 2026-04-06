@@ -33,6 +33,8 @@ model Audit {
   client   Client    @relation(fields: [clientId], references: [id])
   bundles  Bundle[]
   analysis Analysis?
+
+  @@index([clientId])
 }
 
 model Bundle {
@@ -46,6 +48,8 @@ model Bundle {
   bundlePath       String
 
   audit Audit @relation(fields: [auditId], references: [id])
+
+  @@index([auditId])
 }
 
 model Analysis {

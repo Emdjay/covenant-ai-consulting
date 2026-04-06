@@ -26,6 +26,10 @@ export async function GET(
     return NextResponse.json({ error: "Analysis not yet available" }, { status: 404 });
   }
 
-  const analysis = JSON.parse(audit.analysis.resultJson);
-  return NextResponse.json(analysis);
+  try {
+    const analysis = JSON.parse(audit.analysis.resultJson);
+    return NextResponse.json(analysis);
+  } catch {
+    return NextResponse.json({ error: "Analysis data corrupted" }, { status: 500 });
+  }
 }

@@ -4,10 +4,11 @@ import { prisma } from "@/lib/db";
 import { signToken } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
-  const { email, password } = await req.json();
+  const body = await req.json();
+  const { email, password } = body;
 
-  if (!email || !password) {
-    return NextResponse.json({ error: "Email and password required" }, { status: 400 });
+  if (!email || typeof email !== "string" || !password || typeof password !== "string") {
+    return NextResponse.json({ error: "Email and password required (strings)" }, { status: 400 });
   }
 
   const client = await prisma.client.findUnique({ where: { email } });
