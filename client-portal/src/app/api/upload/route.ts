@@ -5,6 +5,7 @@ import path from "path";
 import { prisma } from "@/lib/db";
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || "./uploads";
+const ANALYSIS_ENGINE_URL = process.env.ANALYSIS_ENGINE_URL || "http://analysis-engine:8100";
 
 export async function POST(req: NextRequest) {
   const apiKey = req.headers.get("x-api-key");
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Bundle must be a .zip file" }, { status: 400 });
   }
 
-  const maxSize = 500 * 1024 * 1024; // 500MB
+  const maxSize = 500 * 1024 * 1024;
   if (file.size > maxSize) {
     return NextResponse.json({ error: "Bundle too large (max 500MB)" }, { status: 413 });
   }
@@ -73,10 +74,57 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  triggerAnalysis(audit.id, filePath).catch((err) =>
+    console.error("Background analysis trigger failed:", err)
+  );
+
   return NextResponse.json({
     ok: true,
     bundleId: bundle.id,
     auditId: audit.id,
-    message: "Bundle uploaded successfully. Analysis will be triggered.",
+    message: "Bundle uploaded. Analysis triggered.",
   });
+}
+
+async function triggerAnalysis(auditId: string, bundlePath: string) {
+  try {
+    const res = await fetch(`${ANALYSIS_ENGINE_URL}/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bundle_path: bundlePath, audit_id: auditId }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error("Analysis engine error:", res.status, body);
+      return;
+    }
+
+    const result = await res.json();
+
+    await prisma.analysis.upsert({
+      where: { auditId },
+      create: {
+        auditId,
+        resultJson: result.result_json,
+      },
+      update: {
+        resultJson: result.result_json,
+      },
+    });
+
+    await prisma.audit.update({
+      where: { id: auditId },
+      data: {
+        status: "complete",
+        totalHours: result.total_hours || 0,
+        opportunitiesFound: result.opportunities_count || 0,
+        estimatedWeeklySavings: result.weekly_savings || 0,
+      },
+    });
+
+    console.log(`Analysis complete for audit ${auditId}: ${result.opportunities_count} opportunities`);
+  } catch (err) {
+    console.error("Failed to trigger analysis engine:", err);
+  }
 }

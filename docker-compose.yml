@@ -34,15 +34,36 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=file:./prisma/prod.db
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - ANALYSIS_ENGINE_URL=http://analysis-engine:8100
     volumes:
       - portal-data:/app/prisma
       - portal-uploads:/app/uploads
+    depends_on:
+      - analysis-engine
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3300"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
+
+  analysis-engine:
+    build:
+      context: ./analysis-engine
+      dockerfile: Dockerfile
+    container_name: analysis-engine
+    restart: unless-stopped
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - portal-uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   portal-data:

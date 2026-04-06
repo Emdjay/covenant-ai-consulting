@@ -29,11 +29,11 @@
     "mac": {
       "category": "public.app-category.business",
       "target": ["dmg", "zip"],
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.png"
     },
     "win": {
       "target": ["nsis", "zip"],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.png"
     },
     "linux": {
       "target": ["AppImage", "deb"],

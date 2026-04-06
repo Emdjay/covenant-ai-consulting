@@ -25,7 +25,7 @@ let intervals = [];
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 420,
-    height: 560,
+    height: 620,
     resizable: false,
     frame: false,
     transparent: false,

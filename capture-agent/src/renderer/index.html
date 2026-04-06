@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:">
   <title>Covenant AI — Capture Agent</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -36,12 +36,31 @@
     }
     .header .close-btn:hover { opacity: 1; }
 
+    .tabs {
+      display: flex;
+      background: #001F3F;
+      -webkit-app-region: no-drag;
+    }
+    .tab {
+      flex: 1;
+      padding: 8px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #8899aa;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab:hover { color: #ccc; }
+    .tab.active { color: #D4AF37; border-bottom-color: #D4AF37; }
+
     .content {
       padding: 20px;
       -webkit-app-region: no-drag;
     }
 
-    #consent-screen, #dashboard-screen { display: none; }
+    .screen { display: none; }
 
     .consent-text {
       font-size: 13px;
@@ -79,19 +98,13 @@
       cursor: pointer;
       margin-top: 12px;
     }
-    .btn-primary {
-      background: #001F3F;
-      color: #D4AF37;
-    }
-    .btn-primary:hover { background: #003366; }
-    .btn-danger {
-      background: #e74c3c;
-      color: #fff;
-    }
-    .btn-success {
-      background: #2ecc71;
-      color: #fff;
-    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #001F3F; color: #D4AF37; }
+    .btn-primary:hover:not(:disabled) { background: #003366; }
+    .btn-danger { background: #e74c3c; color: #fff; }
+    .btn-success { background: #2ecc71; color: #fff; }
+    .btn-upload { background: #D4AF37; color: #001F3F; }
+    .btn-upload:hover:not(:disabled) { background: #c9a030; }
 
     .status-badge {
       display: inline-block;
@@ -117,26 +130,19 @@
       padding: 12px;
       text-align: center;
     }
-    .stat-card .number {
-      font-size: 24px;
-      font-weight: 700;
-      color: #001F3F;
-    }
-    .stat-card .label {
-      font-size: 11px;
-      color: #888;
-      margin-top: 4px;
-    }
+    .stat-card .number { font-size: 24px; font-weight: 700; color: #001F3F; }
+    .stat-card .label { font-size: 11px; color: #888; margin-top: 4px; }
 
-    .session-input {
+    .form-input {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid #ddd;
       border-radius: 6px;
       font-size: 13px;
       margin-bottom: 8px;
+      background: #fff;
     }
-    .session-input:focus { outline: none; border-color: #D4AF37; }
+    .form-input:focus { outline: none; border-color: #D4AF37; }
 
     .section-title {
       font-size: 13px;
@@ -144,6 +150,7 @@
       margin: 16px 0 8px;
       color: #001F3F;
     }
+    .section-title:first-child { margin-top: 0; }
 
     .excluded-apps {
       width: 100%;
@@ -154,6 +161,34 @@
       min-height: 60px;
       resize: vertical;
     }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 100;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #2ecc71; color: #fff; }
+    .toast.error { background: #e74c3c; color: #fff; }
+    .toast.info { background: #3498db; color: #fff; }
+
+    .connection-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .connection-dot.connected { background: #2ecc71; }
+    .connection-dot.disconnected { background: #e74c3c; }
   </style>
 </head>
 <body>
@@ -162,8 +197,13 @@
     <button class="close-btn" onclick="window.close()">×</button>
   </div>
 
+  <div class="tabs" id="tab-bar" style="display:none;">
+    <div class="tab active" onclick="switchTab('capture')">Capture</div>
+    <div class="tab" onclick="switchTab('settings')">Portal Settings</div>
+  </div>
+
   <div class="content">
-    <div id="consent-screen">
+    <div id="consent-screen" class="screen">
       <p class="consent-text">
         <strong>Workflow Capture Consent</strong><br><br>
         This agent passively records your workflow to help identify
@@ -176,9 +216,7 @@
         <li>Copy-paste signals (not content over 100 chars)</li>
         <li>Idle/active state transitions</li>
       </ul>
-      <p class="consent-text">
-        <strong>Your privacy controls:</strong>
-      </p>
+      <p class="consent-text"><strong>Your privacy controls:</strong></p>
       <ul class="privacy-list">
         <li>Pause/resume anytime from the tray icon</li>
         <li>Exclude any personal apps (banking, email, etc.)</li>
@@ -190,7 +228,7 @@
       </button>
     </div>
 
-    <div id="dashboard-screen">
+    <div id="capture-screen" class="screen">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <span>Status</span>
         <span id="status-badge" class="status-badge status-active">Active</span>
@@ -209,8 +247,13 @@
 
       <button class="btn" id="pause-btn" onclick="togglePause()">Pause Capture</button>
 
+      <button class="btn btn-upload" id="upload-btn" onclick="exportAndUpload()">
+        Export &amp; Upload to Portal
+      </button>
+      <div id="upload-status" style="font-size:12px;color:#888;text-align:center;margin-top:6px;"></div>
+
       <div class="section-title">Session ID</div>
-      <input class="session-input" id="session-id" placeholder="Enter audit session ID..."
+      <input class="form-input" id="session-id" placeholder="Enter audit session ID..."
              onchange="setSession(this.value)">
 
       <div class="section-title">Excluded Apps (one per line)</div>
@@ -218,33 +261,77 @@
                 placeholder="e.g.&#10;Safari&#10;Messages&#10;1Password"
                 onchange="setExcluded(this.value)"></textarea>
     </div>
+
+    <div id="settings-screen" class="screen">
+      <div class="section-title" style="margin-top:0;">
+        <span class="connection-dot" id="conn-dot"></span>
+        Portal Connection
+      </div>
+
+      <div class="section-title">Portal URL</div>
+      <input class="form-input" id="portal-url"
+             placeholder="https://portal.covenantai.consulting"
+             onchange="savePortalConfig()">
+
+      <div class="section-title">API Key</div>
+      <input class="form-input" id="api-key" type="password"
+             placeholder="Your client API key"
+             onchange="savePortalConfig()">
+
+      <div class="section-title">Audit ID (auto-assigned on first upload)</div>
+      <input class="form-input" id="audit-id"
+             placeholder="Leave blank for auto-assign"
+             onchange="savePortalConfig()">
+
+      <button class="btn btn-primary" onclick="savePortalConfig()">Save Settings</button>
+      <button class="btn btn-success" onclick="testConnection()" id="test-btn">Test Connection</button>
+    </div>
   </div>
 
+  <div class="toast" id="toast"></div>
+
   <script>
+    let currentTab = 'capture';
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', (i === 0 && tab === 'capture') || (i === 1 && tab === 'settings'));
+      });
+      document.getElementById('capture-screen').style.display = tab === 'capture' ? 'block' : 'none';
+      document.getElementById('settings-screen').style.display = tab === 'settings' ? 'block' : 'none';
+    }
+
+    function showToast(msg, type) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + type + ' show';
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
     async function init() {
       const status = await window.captureAgent.getStatus();
       if (status.stats.totalActivities === 0 && !status.paused) {
         document.getElementById('consent-screen').style.display = 'block';
       } else {
-        showDashboard(status);
+        document.getElementById('tab-bar').style.display = 'flex';
+        document.getElementById('capture-screen').style.display = 'block';
+        updateUI(status);
       }
+      await loadPortalConfig();
     }
 
     async function acceptConsent() {
       const status = await window.captureAgent.acceptConsent();
       document.getElementById('consent-screen').style.display = 'none';
-      showDashboard(status);
-    }
-
-    function showDashboard(status) {
-      document.getElementById('dashboard-screen').style.display = 'block';
+      document.getElementById('tab-bar').style.display = 'flex';
+      document.getElementById('capture-screen').style.display = 'block';
       updateUI(status);
     }
 
     function updateUI(status) {
       const badge = document.getElementById('status-badge');
       const btn = document.getElementById('pause-btn');
-
       if (status.paused) {
         badge.textContent = 'Paused';
         badge.className = 'status-badge status-paused';
@@ -256,16 +343,102 @@
         btn.textContent = 'Pause Capture';
         btn.className = 'btn btn-danger';
       }
-
       document.getElementById('stat-activities').textContent = status.stats.totalActivities;
       document.getElementById('stat-screenshots').textContent = status.stats.totalScreenshots;
-
-      if (status.sessionId) {
-        document.getElementById('session-id').value = status.sessionId;
-      }
+      if (status.sessionId) document.getElementById('session-id').value = status.sessionId;
       if (status.excludedApps && status.excludedApps.length) {
         document.getElementById('excluded-apps').value = status.excludedApps.join('\n');
       }
+      updateUploadBtn();
+    }
+
+    function updateUploadBtn() {
+      const url = document.getElementById('portal-url').value;
+      const key = document.getElementById('api-key').value;
+      const btn = document.getElementById('upload-btn');
+      const hasConfig = url && key;
+      btn.disabled = !hasConfig;
+      btn.textContent = hasConfig ? 'Export & Upload to Portal' : 'Configure Portal Settings First';
+    }
+
+    function updateConnectionDot() {
+      const dot = document.getElementById('conn-dot');
+      const url = document.getElementById('portal-url').value;
+      const key = document.getElementById('api-key').value;
+      if (url && key) {
+        dot.className = 'connection-dot connected';
+      } else {
+        dot.className = 'connection-dot disconnected';
+      }
+    }
+
+    async function loadPortalConfig() {
+      const cfg = await window.captureAgent.getPortalConfig();
+      if (cfg.portalUrl) document.getElementById('portal-url').value = cfg.portalUrl;
+      if (cfg.apiKey) document.getElementById('api-key').value = cfg.apiKey;
+      if (cfg.auditId) document.getElementById('audit-id').value = cfg.auditId;
+      updateConnectionDot();
+      updateUploadBtn();
+    }
+
+    async function savePortalConfig() {
+      const portalUrl = document.getElementById('portal-url').value.replace(/\/+$/, '');
+      const apiKey = document.getElementById('api-key').value;
+      const auditId = document.getElementById('audit-id').value;
+      await window.captureAgent.setPortalConfig({ portalUrl, apiKey, auditId: auditId || null });
+      updateConnectionDot();
+      updateUploadBtn();
+      showToast('Settings saved', 'success');
+    }
+
+    async function testConnection() {
+      const url = document.getElementById('portal-url').value.replace(/\/+$/, '');
+      const key = document.getElementById('api-key').value;
+      if (!url || !key) { showToast('Enter URL and API key first', 'error'); return; }
+      document.getElementById('test-btn').disabled = true;
+      document.getElementById('test-btn').textContent = 'Testing...';
+      try {
+        const resp = await fetch(url + '/api/upload', {
+          method: 'OPTIONS',
+          headers: { 'x-api-key': key }
+        });
+        showToast('Connected to portal successfully', 'success');
+      } catch (e) {
+        try {
+          await fetch(url, { mode: 'no-cors' });
+          showToast('Portal reachable (auth will be verified on upload)', 'info');
+        } catch {
+          showToast('Cannot reach portal — check URL', 'error');
+        }
+      }
+      document.getElementById('test-btn').disabled = false;
+      document.getElementById('test-btn').textContent = 'Test Connection';
+    }
+
+    async function exportAndUpload() {
+      const btn = document.getElementById('upload-btn');
+      const statusEl = document.getElementById('upload-status');
+      btn.disabled = true;
+      btn.textContent = 'Exporting...';
+      statusEl.textContent = '';
+      try {
+        btn.textContent = 'Uploading...';
+        const result = await window.captureAgent.exportAndUpload();
+        if (result.uploaded) {
+          showToast('Bundle uploaded successfully!', 'success');
+          statusEl.textContent = 'Audit ID: ' + (result.auditId || 'N/A');
+          if (result.auditId) document.getElementById('audit-id').value = result.auditId;
+        } else {
+          showToast('Exported locally (no portal configured)', 'info');
+          statusEl.textContent = 'Saved to: ' + result.bundleDir;
+        }
+      } catch (e) {
+        showToast('Upload failed: ' + e.message, 'error');
+        statusEl.textContent = '';
+      }
+      btn.disabled = false;
+      btn.textContent = 'Export & Upload to Portal';
+      updateUploadBtn();
     }
 
     async function togglePause() {
@@ -273,9 +446,7 @@
       updateUI(status);
     }
 
-    async function setSession(id) {
-      await window.captureAgent.setSessionId(id);
-    }
+    async function setSession(id) { await window.captureAgent.setSessionId(id); }
 
     async function setExcluded(text) {
       const apps = text.split('\n').map(s => s.trim()).filter(Boolean);
@@ -283,7 +454,6 @@
     }
 
     window.captureAgent.onStatusUpdate((status) => updateUI(status));
-
     setInterval(async () => {
       const status = await window.captureAgent.getStatus();
       updateUI(status);
