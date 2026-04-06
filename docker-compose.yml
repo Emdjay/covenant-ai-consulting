@@ -6,7 +6,7 @@ services:
     container_name: consulting-web
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3200:3200"
+      - "3200:3200"
     environment:
       - NODE_ENV=production
       - SMTP_HOST=${SMTP_HOST:-smtp.hostinger.com}
