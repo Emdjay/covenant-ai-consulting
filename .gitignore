@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build artifacts
+.next/
+out/
+dist/
+build/
+*.egg-info/
+*.tsbuildinfo
+
+# Data & recordings
+recordings/
+uploads/
+*.db
+
+# Credentials & secrets
+.env
+.env.*
+credentials/
+client_secret_*.json
+
+# OS
+.DS_Store
+._*
+Thumbs.db
+
+# Large files
+*.tar.gz
+*.mp4
+*.avi

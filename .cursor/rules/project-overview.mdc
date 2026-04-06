@@ -1,0 +1,26 @@
+---
+description: Covenant AI Consulting — project structure and architecture context
+alwaysApply: true
+---
+
+# Project Overview
+
+This is the **Covenant AI Consulting** monorepo — a workflow consulting business that uses AI-powered screen capture analysis to identify and implement automation opportunities for businesses.
+
+## Repository Structure
+
+| Package | Path | Stack | Purpose |
+|---------|------|-------|---------|
+| Marketing Site | `marketing-site/` | Next.js, React, TypeScript, Tailwind | covenantai.consulting |
+| Client Portal | `client-portal/` | FastAPI (MVP) → Next.js | Audit results and engagement tracking |
+| Capture Agent | `capture-agent/` | Electron, Node.js | Desktop screen capture + activity logger |
+| Analysis Engine | `analysis-engine/` | Python 3.12, Claude API | Workflow pattern detection pipeline |
+| Docs | `docs/` | Markdown | Case studies, templates |
+
+## Key Conventions
+
+- All secrets live in `.env` files (gitignored). Never commit credentials.
+- The marketing site shares design DNA with Covenant Sites (navy/gold palette).
+- The analysis engine uses Claude API for vision (screen OCR) and text (pattern synthesis).
+- The capture agent requires explicit employee consent and has built-in privacy controls.
+- This project is related to but independent from the Covenant Sites / Enoch GraceWeb repo.
