@@ -21,3 +21,29 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+
+  client-portal:
+    build:
+      context: ./client-portal
+      dockerfile: Dockerfile
+    container_name: client-portal
+    restart: unless-stopped
+    ports:
+      - "3300:3300"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:./prisma/prod.db
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+    volumes:
+      - portal-data:/app/prisma
+      - portal-uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3300"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  portal-data:
+  portal-uploads:

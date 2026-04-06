@@ -3,6 +3,8 @@ const path = require("path");
 const Store = require("electron-store").default;
 const tracker = require("./tracker");
 const { getStats } = require("./db");
+const { exportBundle } = require("./exporter");
+const { uploadBundle } = require("./uploader");
 
 const store = new Store({
   defaults: {
@@ -10,6 +12,9 @@ const store = new Store({
     screenshotIntervalMs: 30000,
     consentAccepted: false,
     sessionId: null,
+    portalUrl: "",
+    apiKey: "",
+    auditId: null,
   },
 });
 
@@ -145,6 +150,40 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("get-stats", () => getStats());
+
+  ipcMain.handle("set-portal-config", (_, config) => {
+    if (config.portalUrl) store.set("portalUrl", config.portalUrl);
+    if (config.apiKey) store.set("apiKey", config.apiKey);
+    if (config.auditId) store.set("auditId", config.auditId);
+    return { ok: true };
+  });
+
+  ipcMain.handle("get-portal-config", () => ({
+    portalUrl: store.get("portalUrl"),
+    apiKey: store.get("apiKey"),
+    auditId: store.get("auditId"),
+  }));
+
+  ipcMain.handle("export-and-upload", async () => {
+    const sessionId = store.get("sessionId") || "session";
+    const portalUrl = store.get("portalUrl");
+    const apiKey = store.get("apiKey");
+
+    const { bundleDir, manifest } = await exportBundle(sessionId);
+
+    if (portalUrl && apiKey) {
+      const result = await uploadBundle(bundleDir, {
+        portalUrl,
+        apiKey,
+        sessionId,
+        auditId: store.get("auditId"),
+      });
+      if (result.auditId) store.set("auditId", result.auditId);
+      return { exported: true, uploaded: true, ...result, manifest };
+    }
+
+    return { exported: true, uploaded: false, bundleDir, manifest };
+  });
 });
 
 app.on("window-all-closed", () => {

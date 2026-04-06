@@ -5,14 +5,53 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
   },
   "author": "Covenant AI Consulting",
   "license": "UNLICENSED",
   "type": "commonjs",
+  "build": {
+    "appId": "consulting.covenantai.capture-agent",
+    "productName": "Covenant AI Capture Agent",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.business",
+      "target": ["dmg", "zip"],
+      "icon": "assets/icon.icns"
+    },
+    "win": {
+      "target": ["nsis", "zip"],
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Office"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    }
+  },
   "dependencies": {
+    "archiver": "^7.0.1",
     "better-sqlite3": "^12.8.0",
-    "electron": "^41.1.1",
     "electron-store": "^11.0.2"
+  },
+  "devDependencies": {
+    "electron": "^41.1.1",
+    "electron-builder": "^26.0.12"
   }
 }

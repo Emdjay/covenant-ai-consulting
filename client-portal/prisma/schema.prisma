@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  apiKey    String   @unique @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  audits Audit[]
+}
+
+model Audit {
+  id        String      @id @default(cuid())
+  clientId  String
+  status    String      @default("pending_review")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  totalHours               Float   @default(0)
+  opportunitiesFound       Int     @default(0)
+  estimatedWeeklySavings   Float   @default(0)
+
+  client   Client    @relation(fields: [clientId], references: [id])
+  bundles  Bundle[]
+  analysis Analysis?
+}
+
+model Bundle {
+  id        String   @id @default(cuid())
+  auditId   String
+  sessionId String
+  uploadedAt DateTime @default(now())
+
+  activityCount    Int @default(0)
+  screenshotCount  Int @default(0)
+  bundlePath       String
+
+  audit Audit @relation(fields: [auditId], references: [id])
+}
+
+model Analysis {
+  id        String   @id @default(cuid())
+  auditId   String   @unique
+  createdAt DateTime @default(now())
+
+  resultJson String
+
+  audit Audit @relation(fields: [auditId], references: [id])
+}

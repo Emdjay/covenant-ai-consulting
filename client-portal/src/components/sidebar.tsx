@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   FileBarChart,
@@ -10,15 +10,39 @@ import {
   Zap,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/analysis/audit-001", label: "Latest Analysis", icon: FileBarChart },
-  { href: "#", label: "Automations", icon: Zap, disabled: true },
-  { href: "#", label: "Settings", icon: Settings, disabled: true },
-];
+interface SidebarProps {
+  clientName: string;
+  latestAuditId?: string;
+}
 
-export function Sidebar() {
+export function Sidebar({ clientName, latestAuditId }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const navItems = [
+    { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    {
+      href: latestAuditId ? `/dashboard/analysis/${latestAuditId}` : "#",
+      label: "Latest Analysis",
+      icon: FileBarChart,
+      disabled: !latestAuditId,
+    },
+    { href: "#", label: "Automations", icon: Zap, disabled: true },
+    { href: "#", label: "Settings", icon: Settings, disabled: true },
+  ];
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
+  const initials = clientName
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-sidebar-bg text-sidebar-text">
@@ -60,14 +84,17 @@ export function Sidebar() {
       <div className="border-t border-white/10 p-4">
         <div className="mb-3 flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/30 text-xs font-bold text-white">
-            DC
+            {initials}
           </div>
           <div className="text-sm">
-            <p className="font-medium text-white">Demo Corp</p>
+            <p className="font-medium text-white">{clientName}</p>
             <p className="text-xs text-sidebar-text">Active Audit</p>
           </div>
         </div>
-        <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-text transition-colors hover:bg-white/5 hover:text-white">
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-text transition-colors hover:bg-white/5 hover:text-white"
+        >
           <LogOut className="h-4 w-4" />
           Sign Out
         </button>

@@ -1,16 +1,55 @@
 import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
-import { mockAnalysis } from "@/lib/mock-data";
+import { redirect, notFound } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { getSession } from "@/lib/auth";
 import { TimeChart } from "@/components/time-chart";
 import { OpportunityCard } from "@/components/opportunity-card";
+import type { WorkflowAnalysis } from "@/lib/types";
 
 export default async function AnalysisPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
   const { id } = await params;
-  const analysis = mockAnalysis;
+
+  const audit = await prisma.audit.findFirst({
+    where: { id, clientId: session.clientId },
+    include: { analysis: true },
+  });
+
+  if (!audit) notFound();
+
+  if (!audit.analysis) {
+    return (
+      <div>
+        <div className="mb-8 flex items-center gap-4">
+          <Link
+            href="/dashboard"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-card transition-colors hover:bg-background"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Workflow Analysis</h1>
+            <p className="text-sm text-muted">Audit {id}</p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-card-border bg-card p-8 text-center">
+          <p className="text-lg font-medium">Analysis in Progress</p>
+          <p className="mt-2 text-sm text-muted">
+            This audit is still being analyzed. Check back shortly.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const analysis: WorkflowAnalysis = JSON.parse(audit.analysis.resultJson);
 
   return (
     <div>
@@ -25,7 +64,7 @@ export default async function AnalysisPage({
           <div>
             <h1 className="text-2xl font-bold">Workflow Analysis</h1>
             <p className="text-sm text-muted">
-              Session {id} ·{" "}
+              Session {analysis.session_id} ·{" "}
               {new Date(analysis.analyzed_at).toLocaleDateString("en-US", {
                 month: "long",
                 day: "numeric",
@@ -40,7 +79,6 @@ export default async function AnalysisPage({
         </button>
       </div>
 
-      {/* Executive Summary */}
       <div className="mb-6 rounded-xl border border-card-border bg-card p-6 shadow-sm">
         <h2 className="mb-3 text-lg font-semibold">Executive Summary</h2>
         <div className="prose prose-sm max-w-none text-muted [&_h2]:text-foreground [&_h2]:text-base [&_h2]:font-semibold [&_strong]:text-foreground [&_li]:my-0.5">
@@ -71,7 +109,6 @@ export default async function AnalysisPage({
       <div className="mb-6 grid gap-6 lg:grid-cols-2">
         <TimeChart distribution={analysis.time_distribution} />
 
-        {/* Bottlenecks */}
         <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
             Bottlenecks
@@ -95,7 +132,6 @@ export default async function AnalysisPage({
         </div>
       </div>
 
-      {/* Repetitive Patterns */}
       <div className="mb-6 rounded-xl border border-card-border bg-card p-5 shadow-sm">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
           Repetitive Patterns
@@ -140,7 +176,6 @@ export default async function AnalysisPage({
         </div>
       </div>
 
-      {/* Data Flows */}
       <div className="mb-6 rounded-xl border border-card-border bg-card p-5 shadow-sm">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
           Data Flows
@@ -179,7 +214,6 @@ export default async function AnalysisPage({
         </div>
       </div>
 
-      {/* Automation Opportunities */}
       <div className="mb-6">
         <h3 className="mb-4 text-lg font-semibold">
           Automation Opportunities
@@ -193,7 +227,6 @@ export default async function AnalysisPage({
         </div>
       </div>
 
-      {/* Context Switching */}
       <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
           Context Switching
