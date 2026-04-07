@@ -119,7 +119,7 @@ export default function CaseStudy() {
             text message.
           </p>
           <p className="mt-4 text-lg leading-relaxed text-navy/60">
-            The founder was spending <strong className="text-navy">22-31 hours per week</strong> on
+            The founder was spending <strong className="text-navy">22-31 hours per week</strong>{" "}on
             operations — time that wasn&apos;t spent on design work or growing the business.
           </p>
         </div>
