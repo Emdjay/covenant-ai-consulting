@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "About",
   description:
     "We built an AI agent that runs our own business. Now we help other businesses do the same. Meet Covenant AI Consulting.",
+  alternates: { canonical: "/about" },
 };
 
 export default function About() {

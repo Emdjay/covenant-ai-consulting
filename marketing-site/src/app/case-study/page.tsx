@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Case Study — How We Automated an Entire Business with AI",
   description:
     "Covenant Sites went from 22-31 hours/week of manual operations to ~2.5 hours using Enoch, an autonomous AI business agent. See the real numbers.",
+  alternates: { canonical: "/case-study" },
 };
 
 const BEFORE_AFTER = [

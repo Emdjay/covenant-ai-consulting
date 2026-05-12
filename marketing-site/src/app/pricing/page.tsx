@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   description:
     "From AI website widgets to full workflow audits and implementation. Transparent pricing for every stage.",
+  alternates: { canonical: "/pricing" },
 };
 
 interface Tier {

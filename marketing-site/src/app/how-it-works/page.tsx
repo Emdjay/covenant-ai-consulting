@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "How It Works",
   description:
     "Our 3-phase process: passive workflow capture, AI-powered analysis, and hands-on implementation that delivers measurable ROI.",
+  alternates: { canonical: "/how-it-works" },
 };
 
 const CAPTURE_FEATURES = [
