@@ -72,9 +72,11 @@ export async function POST(request: Request) {
     const payload = body as BookingPayload;
 
     // Forward to Enoch dashboard (non-blocking — email still sends on failure)
+    let forwardError: string | null = null;
     try {
       await forwardToDashboard(payload);
     } catch (dashErr) {
+      forwardError = dashErr instanceof Error ? dashErr.message : String(dashErr);
       console.error("Dashboard forward failed (non-fatal):", dashErr);
     }
 
@@ -157,7 +159,7 @@ export async function POST(request: Request) {
       console.log("=========================================");
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, ...(forwardError && { forwardError }) });
   } catch (err) {
     console.error("Booking error:", err);
     return NextResponse.json(
