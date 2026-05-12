@@ -20,6 +20,42 @@ const REQUIRED_FIELDS: (keyof BookingPayload)[] = [
   "time",
 ];
 
+const ENOCH_DASHBOARD_URL =
+  "https://enoch.covenantsites.com/api/booking/reserve";
+
+/** Convert "9:00 AM" / "1:30 PM" to 24h "09:00" / "13:30" */
+function to24h(time12: string): string {
+  const match = time12.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return time12;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const period = match[3].toUpperCase();
+  if (period === "AM" && hours === 12) hours = 0;
+  if (period === "PM" && hours !== 12) hours += 12;
+  return `${String(hours).padStart(2, "0")}:${minutes}`;
+}
+
+async function forwardToDashboard(payload: BookingPayload): Promise<void> {
+  const res = await fetch(ENOCH_DASHBOARD_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: payload.name,
+      email: payload.email,
+      phone: "",
+      date: payload.date,
+      time: to24h(payload.time),
+      message: payload.painPoint,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Dashboard API responded ${res.status}: ${text.slice(0, 200)}`,
+    );
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Partial<BookingPayload>;
@@ -34,6 +70,13 @@ export async function POST(request: Request) {
     }
 
     const payload = body as BookingPayload;
+
+    // Forward to Enoch dashboard (non-blocking — email still sends on failure)
+    try {
+      await forwardToDashboard(payload);
+    } catch (dashErr) {
+      console.error("Dashboard forward failed (non-fatal):", dashErr);
+    }
 
     const dateDisplay = new Date(payload.date + "T12:00:00").toLocaleDateString(
       "en-US",
