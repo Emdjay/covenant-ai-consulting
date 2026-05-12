@@ -4,6 +4,7 @@ COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 ENV DATABASE_URL="file:./prisma/prod.db"
 RUN npm ci
+ARG CACHE_BUST=0
 COPY . .
 RUN npx prisma migrate deploy
 RUN npm run build
