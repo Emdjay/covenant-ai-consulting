@@ -3,8 +3,6 @@ services:
     build:
       context: ./marketing-site
       dockerfile: Dockerfile
-      args:
-        CACHE_BUST: "2026-05-12-2135"
     container_name: consulting-web
     restart: unless-stopped
     ports:
@@ -28,8 +26,6 @@ services:
     build:
       context: ./client-portal
       dockerfile: Dockerfile
-      args:
-        CACHE_BUST: "2026-05-12-2145"
     container_name: client-portal
     restart: unless-stopped
     ports:
