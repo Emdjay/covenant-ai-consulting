@@ -5,16 +5,17 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
-if (!ADMIN_SECRET) {
-  throw new Error("ADMIN_SECRET environment variable is required");
+function getAdminSecret(): string {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret) throw new Error("ADMIN_SECRET environment variable is required");
+  return secret;
 }
 
 function checkAdmin(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (!auth) return false;
 
-  const expected = `Bearer ${ADMIN_SECRET}`;
+  const expected = `Bearer ${getAdminSecret()}`;
   if (auth.length !== expected.length) return false;
 
   try {
