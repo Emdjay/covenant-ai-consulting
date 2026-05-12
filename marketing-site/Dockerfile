@@ -2,6 +2,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
+ARG CACHE_BUST=0
 COPY . .
 RUN npm run build
 

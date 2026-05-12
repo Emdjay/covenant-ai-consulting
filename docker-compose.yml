@@ -3,6 +3,8 @@ services:
     build:
       context: ./marketing-site
       dockerfile: Dockerfile
+      args:
+        CACHE_BUST: "2026-05-12-2125"
     container_name: consulting-web
     restart: unless-stopped
     ports:
